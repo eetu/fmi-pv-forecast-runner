@@ -1,0 +1,8 @@
+[project]
+name = "fmi-pv-forecast-runner"
+version = "0.1.0"
+description = "One-shot runner around the FMI open PV forecast package. Emits JSON on stdout."
+requires-python = ">=3.10"
+dependencies = [
+    "fmi-pv-forecast @ https://github.com/fmidev/fmi-open-pv-forecast-packaged/raw/273e8c59aaf102cc8203eaf6bb1862945ccc0525/dist/fmi_pv_forecast-0.1.0-py3-none-any.whl",
+]

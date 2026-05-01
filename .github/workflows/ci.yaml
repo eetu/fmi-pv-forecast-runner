@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python:
+    name: "Python"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python from .python-version
+        run: uv python install
+
+      - name: Sync dependencies
+        run: uv sync --frozen || uv sync
+
+      - name: Smoke import check
+        run: uv run python -c "import fmi_pv_forecaster; import run"
+
+  docker:
+    name: "Docker build"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: fmi-pv-forecast-runner:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Verify entrypoint
+        run: docker run --rm --entrypoint python fmi-pv-forecast-runner:ci -c "import fmi_pv_forecaster; import run; print('ok')"
