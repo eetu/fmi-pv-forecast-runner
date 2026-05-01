@@ -1,23 +1,30 @@
 # syntax=docker/dockerfile:1
-FROM python:3.14-slim
+FROM python:3.14-slim AS builder
 
-# uv: fast Python package installer
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+ENV UV_NO_CACHE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/app/.venv
 
-ENV UV_SYSTEM_PYTHON=1 \
-    UV_NO_CACHE=1 \
-    UV_LINK_MODE=copy
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
-COPY pyproject.toml ./
-RUN uv pip install --requirements pyproject.toml
+RUN find /app/.venv -type d -name __pycache__ -prune -exec rm -rf {} + \
+    && find /app/.venv -type d -name tests -prune -exec rm -rf {} + \
+    && find /app/.venv -type d -name test -prune -exec rm -rf {} + \
+    && find /app/.venv -name '*.pyc' -delete
 
+FROM python:3.14-slim AS runtime
+
+WORKDIR /app
+
+COPY --from=builder /app/.venv /app/.venv
 COPY run.py ./
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 USER 1000
 
